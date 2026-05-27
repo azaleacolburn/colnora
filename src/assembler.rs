@@ -42,6 +42,7 @@ pub enum Instruction {
 
     Mov { dest: Reg, a: Value },
     Not { dest: Reg, a: Value },
+    Neg { dest: Reg, a: Value },
 
     Push { a: Value },
     Pop { dest: Reg },
@@ -82,7 +83,8 @@ impl TryFrom<&str> for Instruction {
             },
             ';' => bail!("Commend"),
             _ => {
-                let parts: Vec<&str> = line.trim().split(' ').collect();
+                let comment_removal: Vec<&str> = line.trim().split(';').collect();
+                let parts: Vec<&str> = comment_removal[0].trim().split(' ').collect();
                 match parts.len() {
                     1 => Self::match_zero_arg_code(parts[0]),
                     2 => Self::match_one_arg_code(parts[0], parts[1]),
@@ -150,6 +152,12 @@ impl Instruction {
 
                 Instruction::Not { dest, a }
             }
+            "neg" => {
+                let dest = Reg::try_from(a).unwrap();
+                let a = Value::try_from(b).unwrap();
+
+                Instruction::Neg { dest, a }
+            }
             "eq" => {
                 let a = Value::try_from(a).unwrap();
                 let b = Value::try_from(b).unwrap();
@@ -193,13 +201,12 @@ impl TryFrom<&str> for Value {
     type Error = anyhow::Error;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        if value.starts_with("[") {
+        let value = if value.starts_with("[") {
             let inner = Value::try_from(&value[1..value.len() - 1])?;
             assert!(value.chars().last().unwrap() == ']');
 
-            Value::Deref(Box::new(inner));
-        }
-        let value = if let Ok(reg) = Reg::try_from(value) {
+            Value::Deref(Box::new(inner))
+        } else if let Ok(reg) = Reg::try_from(value) {
             Value::Reg(reg)
         } else {
             let num = value.parse::<i32>()?;

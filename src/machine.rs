@@ -63,9 +63,13 @@ impl Machine {
 
             Instruction::Mov { dest, a } => self.two_arg(dest, a, |a| a),
             Instruction::Not { dest, a } => self.two_arg(dest, a, |a| !a),
+            Instruction::Neg { dest, a } => self.two_arg(dest, a, |a| -a),
 
             Instruction::Push { a } => self.push(a),
-            Instruction::Pop { dest } => self.pop(dest),
+            Instruction::Pop { dest } => {
+                println!("{:?}", self.stack);
+                self.pop(dest);
+            }
 
             Instruction::Label { name: _ } => {}
 
