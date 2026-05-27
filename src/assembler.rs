@@ -14,6 +14,7 @@ pub enum Reg {
     Ten,
 
     Cmp,
+    Link,
     StackPtr,
 }
 
@@ -48,12 +49,20 @@ pub enum Instruction {
     Eq { a: Value, b: Value },
     NEq { a: Value, b: Value },
 
-    Jmp { label: String },
-    JmpIf { label: String },
+    // Branch without link
+    Br { label: String },
+    BrIf { label: String },
+
+    // Branch with link
+    Bl { label: String },
+    BlIf { label: String },
 
     Label { name: String },
+    Put { a: Value },
 
     Assert,
+    Ret,
+    RetIf,
     End,
 }
 
@@ -93,16 +102,24 @@ impl Instruction {
         match code {
             "assert" => Instruction::Assert,
             "end" => Instruction::End,
+            "ret" => Instruction::Ret,
+            "retif" => Instruction::RetIf,
             _ => panic!("Invalid Zero Argument Instruction: {}", code),
         }
     }
 
     fn match_one_arg_code(code: &str, a: &str) -> Instruction {
         match code {
-            "jmp" => Instruction::Jmp {
+            "bl" => Instruction::Bl {
                 label: a.to_string(),
             },
-            "jmpif" => Instruction::JmpIf {
+            "blif" => Instruction::BlIf {
+                label: a.to_string(),
+            },
+            "br" => Instruction::Br {
+                label: a.to_string(),
+            },
+            "brif" => Instruction::BrIf {
                 label: a.to_string(),
             },
             "push" => Instruction::Push {
@@ -111,6 +128,9 @@ impl Instruction {
             "pop" => Instruction::Pop {
                 dest: Reg::try_from(a)
                     .expect(format!("Invalid register being popped into {}", a).as_str()),
+            },
+            "put" => Instruction::Put {
+                a: Value::try_from(a).expect(format!("Invalid value being pushed {}", a).as_str()),
             },
             _ => panic!("Invalid code"),
         }
@@ -206,6 +226,7 @@ impl TryFrom<&str> for Reg {
             "%9" => Self::Nine,
             "%10" => Self::Ten,
             "%cmp" => Self::Cmp,
+            "%link" => Self::Link,
             "%stack" => Self::StackPtr,
             _ => return Err(format!("Invalid Register Name {}", value)),
         };

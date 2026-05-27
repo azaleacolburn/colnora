@@ -1,6 +1,6 @@
 use crate::assembler::{Instruction, Reg, Value};
 use anyhow::{Result, bail};
-use std::collections::HashMap;
+use std::{collections::HashMap, io::Write};
 
 type Registers = HashMap<Reg, i32>;
 type Labels = HashMap<String, usize>;
@@ -11,7 +11,6 @@ pub struct Machine {
     registers: Registers,
     labels: Labels,
     instruction_counter: usize,
-    stop: bool,
 }
 
 impl Machine {
@@ -21,7 +20,6 @@ impl Machine {
             registers: Self::init_reg(),
             labels: HashMap::new(),
             instruction_counter: 0,
-            stop: false,
         }
     }
     pub fn run(&mut self, instructions: &[Instruction]) -> Result<()> {
@@ -37,8 +35,8 @@ impl Machine {
         self.instruction_counter = 0;
         while self.instruction_counter < instructions.len() {
             let instruction = &instructions[self.instruction_counter];
-            self.execute_instruction(instruction)?;
-            if self.stop {
+            // Determines whether to break
+            if self.execute_instruction(instruction)? {
                 return Ok(());
             }
 
@@ -48,8 +46,8 @@ impl Machine {
         Ok(())
     }
 
-    fn execute_instruction(&mut self, instruction: &Instruction) -> Result<()> {
-        // println!("Instruction: {:?}", instruction);
+    fn execute_instruction(&mut self, instruction: &Instruction) -> Result<bool> {
+        println!("Instruction: {:?}", instruction);
         match instruction {
             Instruction::Add { dest, a, b } => self.three_arg(dest, a, b, |a, b| a + b),
             Instruction::Sub { dest, a, b } => self.three_arg(dest, a, b, |a, b| a - b),
@@ -70,22 +68,33 @@ impl Machine {
             Instruction::Pop { dest } => self.pop(dest),
 
             Instruction::Label { name: _ } => {}
-            Instruction::Jmp { label } => self.goto_label(label),
 
-            Instruction::JmpIf { label } if self.cmp() => self.goto_label(label),
-            Instruction::JmpIf { label: _ } => {}
+            Instruction::Br { label } => self.br_label(label),
+            Instruction::BrIf { label } if self.cmp() => self.br_label(label),
+            Instruction::BrIf { label: _ } => {}
 
-            Instruction::End => self.stop = true,
+            Instruction::Bl { label } => self.bl_label(label),
+            Instruction::BlIf { label } if self.cmp() => self.bl_label(label),
+            Instruction::BlIf { label: _ } => {}
+
+            Instruction::Ret => self.link_back(),
+
+            Instruction::RetIf if self.cmp() => self.link_back(),
+            Instruction::RetIf => {}
+
+            Instruction::End => return Ok(true),
+            Instruction::Put { a } => self.put(a),
             Instruction::Assert => {
                 if !self.cmp() {
                     bail!("Assertion Failed");
                 }
             }
+
             Instruction::Eq { a, b } => self.set_cmp(a, b, |a, b| a == b),
             Instruction::NEq { a, b } => self.set_cmp(a, b, |a, b| a != b),
         };
 
-        Ok(())
+        Ok(false)
     }
 
     fn two_arg(&mut self, dest: &Reg, a: &Value, pred: impl Fn(i32) -> i32) {
@@ -141,8 +150,17 @@ impl Machine {
         self.set_reg(dest, self.stack[self.stack_pointer()]);
     }
 
-    fn goto_label(&mut self, label: &str) {
+    fn link_back(&mut self) {
+        self.instruction_counter = *self.registers.get(&Reg::Link).unwrap() as usize;
+    }
+
+    fn br_label(&mut self, label: &str) {
         self.instruction_counter = *self.labels.get(label).expect("Invalid Label")
+    }
+
+    fn bl_label(&mut self, label: &str) {
+        self.set_reg(&Reg::Link, self.instruction_counter as i32);
+        self.br_label(label);
     }
 
     fn set_label(&mut self, name: &str, i: usize) {
@@ -158,6 +176,13 @@ impl Machine {
 
     fn cmp(&self) -> bool {
         *self.registers.get(&Reg::Cmp).unwrap() == 1
+    }
+
+    fn put(&self, a: &Value) {
+        let a = self.evaluate(a);
+
+        println!("{a}");
+        // std::io::stdout().write(&[a as u8])?;
     }
 }
 
