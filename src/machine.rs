@@ -32,7 +32,7 @@ impl Machine {
             })
             .for_each(|(name, i)| self.set_label(name, i));
 
-        self.instruction_counter = 0;
+        self.instruction_counter = *self.labels.get("@start").expect("No @start label provided");
         while self.instruction_counter < instructions.len() {
             let instruction = &instructions[self.instruction_counter];
             // Determines whether to break
