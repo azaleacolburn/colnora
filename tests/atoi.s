@@ -20,6 +20,19 @@
     eq %2 989655
     assert
 
+    push 45 ; '-'
+    push 53 ; 5
+    push 51 ; 3
+    push 49 ; 1
+    push 48 ; 0
+    push 57 ; 9
+    push 53 ; 5
+    push 0 ; NULL
+    sub %1 %stack 8
+    bl @atoi
+    put %2
+    eq %2 -531095
+    assert
 
     end
 
