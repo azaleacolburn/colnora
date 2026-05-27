@@ -42,6 +42,9 @@ pub enum Instruction {
     Mov { dest: Reg, a: Value },
     Not { dest: Reg, a: Value },
 
+    Push { a: Value },
+    Pop { dest: Reg },
+
     Eq { a: Value, b: Value },
     NEq { a: Value, b: Value },
 
@@ -51,12 +54,14 @@ pub enum Instruction {
     Label { name: String },
 
     Assert,
+    End,
 }
 
 impl TryFrom<&str> for Instruction {
     type Error = anyhow::Error;
 
     fn try_from(line: &str) -> Result<Self, Self::Error> {
+        let line = line.trim();
         if line.is_empty() {
             bail!("Empty Line")
         }
@@ -66,6 +71,7 @@ impl TryFrom<&str> for Instruction {
             '@' => Instruction::Label {
                 name: line.to_string(),
             },
+            ';' => bail!("Commend"),
             _ => {
                 let parts: Vec<&str> = line.trim().split(' ').collect();
                 match parts.len() {
@@ -86,6 +92,7 @@ impl Instruction {
     fn match_zero_arg_code(code: &str) -> Instruction {
         match code {
             "assert" => Instruction::Assert,
+            "end" => Instruction::End,
             _ => panic!("Invalid Zero Argument Instruction: {}", code),
         }
     }
@@ -95,8 +102,15 @@ impl Instruction {
             "jmp" => Instruction::Jmp {
                 label: a.to_string(),
             },
-            "jmpif" => Instruction::Jmp {
+            "jmpif" => Instruction::JmpIf {
                 label: a.to_string(),
+            },
+            "push" => Instruction::Push {
+                a: Value::try_from(a).expect(format!("Invalid value being pushed {}", a).as_str()),
+            },
+            "pop" => Instruction::Pop {
+                dest: Reg::try_from(a)
+                    .expect(format!("Invalid register being popped into {}", a).as_str()),
             },
             _ => panic!("Invalid code"),
         }
@@ -140,16 +154,16 @@ impl Instruction {
         match code {
             "add" => Instruction::Add { dest, a, b },
             "sub" => Instruction::Sub { dest, a, b },
-            "mul" => Instruction::Sub { dest, a, b },
-            "div" => Instruction::Sub { dest, a, b },
+            "mul" => Instruction::Mul { dest, a, b },
+            "div" => Instruction::Div { dest, a, b },
 
-            "and" => Instruction::Sub { dest, a, b },
-            "or" => Instruction::Sub { dest, a, b },
-            "xor" => Instruction::Sub { dest, a, b },
+            "and" => Instruction::And { dest, a, b },
+            "or" => Instruction::Or { dest, a, b },
+            "xor" => Instruction::Xor { dest, a, b },
 
-            "nand" => Instruction::Sub { dest, a, b },
-            "nor" => Instruction::Sub { dest, a, b },
-            "nxor" => Instruction::Sub { dest, a, b },
+            "nand" => Instruction::NAnd { dest, a, b },
+            "nor" => Instruction::NOr { dest, a, b },
+            "nxor" => Instruction::NXor { dest, a, b },
             _ => panic!("Invalid Two Argument Instruction: {}", code),
         }
     }
