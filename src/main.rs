@@ -9,12 +9,14 @@ pub mod machine;
 mod test;
 
 fn main() -> Result<()> {
-    let instructions_str = read_to_string("tests/test.s")?;
-    let instructions = assembler::parse_instructions(&instructions_str);
-    println!("{:?}", instructions);
+    let instructions_str = read_to_string("tests/hello_name.s")?;
+    let assembly_file = assembler::parse_file(&instructions_str);
+    println!("{:?}", assembly_file.instructions);
 
     let mut machine = Machine::new();
-    machine.run(&instructions)?;
+    machine.load(&assembly_file.data);
+
+    machine.run(&assembly_file.instructions)?;
 
     println!("{:?}", machine);
 

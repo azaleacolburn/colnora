@@ -1,13 +1,15 @@
+.text
+
 @start
-    mov %1 0
+    mov %a 0
     bl @loop
-    eq %1 10
+    eq %a 10
     assert
 
     end
 
 @loop
-    add %1 %1 1
-    neq %1 10
+    add %a %a 1
+    neq %a 10
     brif @loop
     ret

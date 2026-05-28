@@ -1,17 +1,19 @@
+use std::collections::HashMap;
+
 use anyhow::bail;
 
 #[derive(Debug, Clone, Eq, Hash, PartialEq, Copy)]
 pub enum Reg {
-    One,
-    Two,
-    Three,
-    Four,
-    Five,
-    Six,
-    Seven,
-    Eight,
-    Nine,
-    Ten,
+    A,
+    B,
+    C,
+    D,
+    E,
+    F,
+    G,
+    H,
+    I,
+    J,
 
     Cmp,
     Link,
@@ -22,6 +24,7 @@ pub enum Reg {
 pub enum Value {
     Lit(i32),
     Reg(Reg),
+    Data(String),
     Deref(Box<Value>),
 }
 
@@ -64,6 +67,7 @@ pub enum Instruction {
     Assert,
     Ret,
     RetIf,
+    SysCall,
     End,
 }
 
@@ -81,6 +85,7 @@ impl TryFrom<&str> for Instruction {
             '@' => Instruction::Label {
                 name: line.to_string(),
             },
+            '.' => bail!("Section Header"),
             ';' => bail!("Commend"),
             _ => {
                 let comment_removal: Vec<&str> = line.trim().split(';').collect();
@@ -106,6 +111,7 @@ impl Instruction {
             "end" => Instruction::End,
             "ret" => Instruction::Ret,
             "retif" => Instruction::RetIf,
+            "sys" => Instruction::SysCall,
             _ => panic!("Invalid Zero Argument Instruction: {}", code),
         }
     }
@@ -208,9 +214,10 @@ impl TryFrom<&str> for Value {
             Value::Deref(Box::new(inner))
         } else if let Ok(reg) = Reg::try_from(value) {
             Value::Reg(reg)
-        } else {
-            let num = value.parse::<i32>()?;
+        } else if let Ok(num) = value.parse::<i32>() {
             Value::Lit(num)
+        } else {
+            Value::Data(value.to_string())
         };
 
         Ok(value)
@@ -222,19 +229,19 @@ impl TryFrom<&str> for Reg {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let value = match value {
-            "%1" => Self::One,
-            "%2" => Self::Two,
-            "%3" => Self::Three,
-            "%4" => Self::Four,
-            "%5" => Self::Five,
-            "%6" => Self::Six,
-            "%7" => Self::Seven,
-            "%8" => Self::Eight,
-            "%9" => Self::Nine,
-            "%10" => Self::Ten,
+            "%a" => Self::A,
+            "%b" => Self::B,
+            "%c" => Self::C,
+            "%d" => Self::D,
+            "%e" => Self::E,
+            "%f" => Self::F,
+            "%g" => Self::G,
+            "%h" => Self::H,
+            "%i" => Self::I,
+            "%j" => Self::J,
             "%cmp" => Self::Cmp,
-            "%link" => Self::Link,
-            "%stack" => Self::StackPtr,
+            "%lnk" => Self::Link,
+            "%sp" => Self::StackPtr,
             _ => return Err(format!("Invalid Register Name {}", value)),
         };
 
@@ -247,16 +254,16 @@ impl TryFrom<i32> for Reg {
 
     fn try_from(value: i32) -> Result<Self, Self::Error> {
         let value = match value {
-            1 => Self::One,
-            2 => Self::Two,
-            3 => Self::Three,
-            4 => Self::Four,
-            5 => Self::Five,
-            6 => Self::Six,
-            7 => Self::Seven,
-            8 => Self::Eight,
-            9 => Self::Nine,
-            10 => Self::Ten,
+            1 => Self::A,
+            2 => Self::B,
+            3 => Self::C,
+            4 => Self::D,
+            5 => Self::E,
+            6 => Self::F,
+            7 => Self::G,
+            8 => Self::H,
+            9 => Self::I,
+            10 => Self::J,
             _ => return Err(format!("Invalid Register Number {}", value)),
         };
 
@@ -264,10 +271,90 @@ impl TryFrom<i32> for Reg {
     }
 }
 
+#[derive(Debug, Clone)]
+pub enum Data {
+    Array(Vec<u8>),
+    Number(i32),
+}
+
+pub struct AssemblyFile {
+    pub instructions: Vec<Instruction>,
+    pub data: Vec<(String, Data)>,
+}
+
+pub fn parse_file(file_text: &str) -> AssemblyFile {
+    let sections = split_file_by_section(file_text);
+
+    println!("{:?}", sections);
+
+    let instructions = sections.get("text").expect("No .text section provided");
+    let instructions = parse_instructions(instructions);
+
+    let data = sections.get("data").unwrap_or(&"");
+    let data = parse_data(data);
+
+    AssemblyFile { instructions, data }
+}
+
+pub fn split_file_by_section(file_text: &str) -> HashMap<&str, &str> {
+    let mut sections: HashMap<&str, &str> = HashMap::new();
+
+    file_text
+        .split('.')
+        .filter_map(|section| section.split_once('\n'))
+        .for_each(|(name, section)| {
+            sections.insert(name, section);
+        });
+
+    sections
+}
+
 pub fn parse_instructions(instructions: &str) -> Vec<Instruction> {
     instructions
         .lines()
         .map(|line| line.try_into())
         .filter_map(|instruction| instruction.ok())
+        .collect()
+}
+
+fn parse_string(value: &str) -> Data {
+    Data::Array(value[1..value.len() - 1].bytes().collect::<Vec<u8>>())
+}
+
+fn parse_char(value: &str) -> Data {
+    let c = &value[1..value.len() - 1];
+    assert!(c.len() == 1);
+    let c = c.as_bytes()[0];
+
+    Data::Number(c as i32)
+}
+
+fn parse_num(value: &str, name: &str) -> Data {
+    let num = value
+        .parse::<i32>()
+        .expect(format!("Invalid Number As Value For Data Section Object {}", name).as_str());
+
+    Data::Number(num)
+}
+
+pub fn parse_data(data: &str) -> Vec<(String, Data)> {
+    data.lines()
+        .filter(|line| !line.is_empty())
+        .map(|line| line.split(':').collect())
+        .map(|split: Vec<&str>| (split[0].to_string(), split[1].trim()))
+        .map(|(name, value)| {
+            let value = match value
+                .chars()
+                .nth(0)
+                .expect(format!("No Value For Data Section Object {}", name).as_str())
+            {
+                '"' => parse_string(value),
+                '\'' => parse_char(value),
+                n if n.is_numeric() => parse_num(value, &name),
+                _ => panic!("Invalid Value For Data Section Object {}", name),
+            };
+
+            (name, value)
+        })
         .collect()
 }

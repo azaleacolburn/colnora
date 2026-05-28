@@ -14,11 +14,12 @@ fn test_all() -> anyhow::Result<()> {
             let name = dir.file_name();
             let name = name.to_str().unwrap().split('.').next().unwrap();
 
-            let instructions = read_to_string(dir.path())?;
-            let instructions = assembler::parse_instructions(&instructions);
+            let file_text = read_to_string(dir.path())?;
+            let assembly_file = assembler::parse_file(&file_text);
 
             let mut machine = Machine::new();
-            match machine.run(&instructions) {
+            machine.load(&assembly_file.data);
+            match machine.run(&assembly_file.instructions) {
                 Ok(_) => println!("`{}` Test Succeeded", name),
                 Err(_) => {
                     failed.push(name.to_string());

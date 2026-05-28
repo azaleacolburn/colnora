@@ -1,37 +1,39 @@
+.text
+
 @start
-    mov %1 10
-    mov %2 2
+    mov %a 10
+    mov %b 2
     bl @exp
-    eq %3 100
+    eq %c 100
     assert
 
-    mov %1 10
-    mov %2 0
+    mov %a 10
+    mov %b 0
     bl @exp
-    eq %3 1
+    eq %c 1
     assert
 
-    mov %1 5
-    mov %2 3
+    mov %a 5
+    mov %b 3
     bl @exp
-    eq %3 125
+    eq %c 125
     assert
 
 
 
     end
 
-; Put `a` in `%1`
-; Put `b` in `%2`
-; Sets `%2` equal to `0`
-; Leaves `%1` unchanged
-; Returns `a^b` into `%3`
+; Put `a` in `%a`
+; Put `b` in `%b`
+; Sets `%b` equal to `0`
+; Leaves `%a` unchanged
+; Returns `a^b` into `%c`
 @exp
-    mov %3 1
+    mov %c 1
     @loop
-        eq %2 0
-        put %2
+        eq %b 0
+        put %b
         retif
-        sub %2 %2 1
-        mul %3 %3 %1
+        sub %b %b 1
+        mul %c %c %a
         br @loop

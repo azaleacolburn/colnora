@@ -1,16 +1,23 @@
-use crate::assembler::{Instruction, Reg, Value};
+use crate::assembler::{Data, Instruction, Reg, Value};
 use anyhow::{Result, bail};
-use std::{collections::HashMap, io::Write};
+use std::{
+    collections::HashMap,
+    fs,
+    io::{Read, Write},
+    os::fd::FromRawFd,
+    ptr,
+};
 
 type Registers = HashMap<Reg, i32>;
 type Labels = HashMap<String, usize>;
 
 #[derive(Debug, Clone)]
 pub struct Machine {
-    stack: [i32; 480],
+    stack: [u8; 480],
     registers: Registers,
     labels: Labels,
     instruction_counter: usize,
+    data: HashMap<String, usize>,
 }
 
 impl Machine {
@@ -20,8 +27,35 @@ impl Machine {
             registers: Self::init_reg(),
             labels: HashMap::new(),
             instruction_counter: 0,
+            data: HashMap::new(),
         }
     }
+
+    pub fn load(&mut self, data: &[(String, Data)]) {
+        let mut sp = 0;
+
+        data.iter().for_each(|(name, data)| match data {
+            Data::Array(array) => {
+                self.data.insert(name.clone(), sp);
+                array.iter().for_each(|num| {
+                    self.stack[sp] = *num;
+                    sp += 1;
+                });
+
+                self.stack[sp] = 0;
+                sp += 1;
+            }
+            Data::Number(num) => {
+                self.data.insert(name.clone(), sp);
+
+                self.stack[sp] = *num as u8;
+                sp += 1;
+            }
+        });
+
+        println!("{:?}", self.stack);
+    }
+
     pub fn run(&mut self, instructions: &[Instruction]) -> Result<()> {
         instructions
             .iter()
@@ -47,7 +81,7 @@ impl Machine {
     }
 
     fn execute_instruction(&mut self, instruction: &Instruction) -> Result<bool> {
-        println!("Instruction: {:?}", instruction);
+        // println!("Instruction: {:?}", instruction);
         match instruction {
             Instruction::Add { dest, a, b } => self.three_arg(dest, a, b, |a, b| a + b),
             Instruction::Sub { dest, a, b } => self.three_arg(dest, a, b, |a, b| a - b),
@@ -88,6 +122,7 @@ impl Machine {
 
             Instruction::End => return Ok(true),
             Instruction::Put { a } => self.put(a),
+            Instruction::SysCall => self.system_call(),
             Instruction::Assert => {
                 if !self.cmp() {
                     bail!("Assertion Failed");
@@ -118,8 +153,13 @@ impl Machine {
             Value::Lit(n) => *n,
             Value::Deref(value) => {
                 let addr = self.evaluate(value);
-                self.stack[addr as usize]
+                self.stack[addr as usize] as i32
             }
+            Value::Data(name) => *self
+                .data
+                .get(name)
+                .expect(format!("Data ptr {} not found in .data section", name).as_str())
+                as i32,
         }
     }
 
@@ -145,13 +185,13 @@ impl Machine {
     }
 
     fn push(&mut self, a: &Value) {
-        self.stack[self.stack_pointer()] = self.evaluate(a);
+        self.stack[self.stack_pointer()] = self.evaluate(a) as u8;
         self.incr_stack_pointer();
     }
 
     fn pop(&mut self, dest: &Reg) {
         self.decr_stack_pointer();
-        self.set_reg(dest, self.stack[self.stack_pointer()]);
+        self.set_reg(dest, self.stack[self.stack_pointer()] as i32);
     }
 
     fn link_back(&mut self) {
@@ -186,7 +226,45 @@ impl Machine {
         let a = self.evaluate(a);
 
         println!("{a}");
-        // std::io::stdout().write(&[a as u8])?;
+    }
+
+    fn system_call(&self) {
+        let code = self.registers.get(&Reg::A).unwrap();
+        match *code {
+            // Restart
+            0 => {}
+            1 => std::process::exit(0),
+            2 => {}
+            3 => self.read_sys(),
+            4 => self.write_sys(),
+            _ => {}
+        }
+    }
+
+    fn read_sys(&self) {
+        let fd = *self.registers.get(&Reg::B).unwrap();
+        let idx = *self.registers.get(&Reg::C).unwrap() as usize;
+        let len = *self.registers.get(&Reg::D).unwrap() as usize;
+
+        let buf = (&self.stack[idx]) as *const u8 as *mut u8;
+        let buf = unsafe { ptr::slice_from_raw_parts_mut(buf, len).as_mut().unwrap() };
+
+        let mut file = unsafe { fs::File::from_raw_fd(fd) };
+        file.read(buf).unwrap();
+    }
+
+    fn write_sys(&self) {
+        println!("{:?}", self);
+        let fd = *self.registers.get(&Reg::B).unwrap();
+        let idx = *self.registers.get(&Reg::C).unwrap() as usize;
+        let len = *self.registers.get(&Reg::D).unwrap() as usize;
+
+        let buf = (&self.stack[idx]) as *const u8;
+        let buf = unsafe { ptr::slice_from_raw_parts(buf, len).as_ref().unwrap() };
+
+        let mut file = unsafe { fs::File::from_raw_fd(fd) };
+        println!("fd {fd}");
+        file.write(buf).unwrap();
     }
 }
 
