@@ -99,6 +99,9 @@ impl Machine {
             Instruction::Not { dest, a } => self.two_arg(dest, a, |a| !a),
             Instruction::Neg { dest, a } => self.two_arg(dest, a, |a| -a),
 
+            Instruction::Store { a, offset } => self.store(a, offset),
+            Instruction::Load { dest, offset } => self.load_register(dest, offset),
+
             Instruction::Push { a } => self.push(a),
             Instruction::Pop { dest } => {
                 println!("{:?}", self.stack);
@@ -165,8 +168,8 @@ impl Machine {
 
     // TODO
     // Maybe remove idk
-    fn set_reg(&mut self, dest: &Reg, value: i32) {
-        self.registers.insert(*dest, value);
+    fn set_reg(&mut self, dest: &Reg, value: impl Into<i32>) {
+        self.registers.insert(*dest, value.into());
     }
 
     fn stack_pointer(&self) -> usize {
@@ -184,6 +187,22 @@ impl Machine {
         self.registers.entry(Reg::StackPtr).and_modify(|n| *n -= 1);
     }
 
+    fn store(&mut self, a: &Value, offset: &Value) {
+        let value = self.evaluate(a);
+        let offset = self.evaluate(offset);
+
+        let addr = (self.stack_pointer() as i32 + offset) as usize;
+
+        self.stack[addr] = value as u8;
+    }
+
+    fn load_register(&mut self, dest: &Reg, offset: &Value) {
+        let offset = self.evaluate(offset);
+        let addr = (self.stack_pointer() as i32 + offset) as usize;
+
+        self.set_reg(dest, self.stack[addr]);
+    }
+
     fn push(&mut self, a: &Value) {
         self.stack[self.stack_pointer()] = self.evaluate(a) as u8;
         self.incr_stack_pointer();
@@ -191,7 +210,7 @@ impl Machine {
 
     fn pop(&mut self, dest: &Reg) {
         self.decr_stack_pointer();
-        self.set_reg(dest, self.stack[self.stack_pointer()] as i32);
+        self.set_reg(dest, self.stack[self.stack_pointer()]);
     }
 
     fn link_back(&mut self) {

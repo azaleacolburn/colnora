@@ -47,6 +47,13 @@ pub enum Instruction {
     Not { dest: Reg, a: Value },
     Neg { dest: Reg, a: Value },
 
+    Store { a: Value, offset: Value },
+    Load { dest: Reg, offset: Value },
+
+    // Should be sugar for:
+    // `str a 0`
+    // `add %sp %sp 1`
+    // or smth like that
     Push { a: Value },
     Pop { dest: Reg },
 
@@ -176,6 +183,20 @@ impl Instruction {
 
                 Instruction::NEq { a, b }
             }
+
+            "str" => {
+                let a = Value::try_from(a).unwrap();
+                let offset = Value::try_from(b).unwrap();
+
+                Instruction::Store { a, offset }
+            }
+            "ldr" => {
+                let dest = Reg::try_from(a).unwrap();
+                let offset = Value::try_from(b).unwrap();
+
+                Instruction::Load { dest, offset }
+            }
+
             _ => panic!("Invalid Two Argument Instruction: {}", code),
         }
     }
