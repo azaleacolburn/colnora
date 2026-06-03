@@ -25,10 +25,11 @@ pub fn read_instructions_file<S: MachineState>(machine: Machine<S>) -> Result<Ma
     // let mut machine = Machine::<Loaded>::new(assembly_file);
     Ok(machine.load_all(assembly_file))
 }
+
 pub fn app(terminal: &mut DefaultTerminal) -> anyhow::Result<()> {
     let mut app = App::new();
     loop {
-        terminal.draw(render)?;
+        terminal.draw(|frame: &mut Frame| render(frame, machine))?;
         if let Some(event) = crossterm::event::read()?.as_key_event() {
             let stop = match (app.mode, event.code) {
                 (EditMode::Normal, KeyCode::Char(c)) => app.match_normal_command(c),

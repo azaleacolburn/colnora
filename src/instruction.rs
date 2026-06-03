@@ -183,55 +183,56 @@ impl Instruction {
                     .expect(format!("Invalid register being popped into {}", a).as_str()),
             },
             "put" => Instruction::Put {
-                a: Value::try_from(a).expect(format!("Invalid value being pushed {}", a).as_str()),
+                a: Value::try_from(a).expect(format!("Invalid value being put {}", a).as_str()),
             },
             _ => panic!("Invalid code"),
         }
     }
 
     fn match_two_arg_code(code: &str, a: &str, b: &str) -> Instruction {
+        macro_rules! generate {
+            ($t:ty) => {
+                |a: &str, b: &str| {
+                    let a = <$t>::try_from(a).unwrap();
+                    let b = Value::try_from(b).unwrap();
+
+                    (a, b)
+                }
+            };
+        }
+
+        let reg_val = generate!(Reg);
+        let val_val = generate!(Value);
+
         match code {
             "mov" => {
-                let dest = Reg::try_from(a).unwrap();
-                let a = Value::try_from(b).unwrap();
-
+                let (dest, a) = reg_val(a, b);
                 Instruction::Mov { dest, a }
             }
             "not" => {
-                let dest = Reg::try_from(a).unwrap();
-                let a = Value::try_from(b).unwrap();
-
+                let (dest, a) = reg_val(a, b);
                 Instruction::Not { dest, a }
             }
-            "neg" => {
-                let dest = Reg::try_from(a).unwrap();
-                let a = Value::try_from(b).unwrap();
 
+            "neg" => {
+                let (dest, a) = reg_val(a, b);
                 Instruction::Neg { dest, a }
             }
             "eq" => {
-                let a = Value::try_from(a).unwrap();
-                let b = Value::try_from(b).unwrap();
-
+                let (a, b) = val_val(a, b);
                 Instruction::Eq { a, b }
             }
             "neq" => {
-                let a = Value::try_from(a).unwrap();
-                let b = Value::try_from(b).unwrap();
-
+                let (a, b) = val_val(a, b);
                 Instruction::NEq { a, b }
             }
 
             "str" => {
-                let a = Value::try_from(a).unwrap();
-                let offset = Value::try_from(b).unwrap();
-
+                let (a, offset) = val_val(a, b);
                 Instruction::Store { a, offset }
             }
             "ldr" => {
-                let dest = Reg::try_from(a).unwrap();
-                let offset = Value::try_from(b).unwrap();
-
+                let (dest, offset) = reg_val(a, b);
                 Instruction::Load { dest, offset }
             }
 
