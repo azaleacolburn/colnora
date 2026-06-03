@@ -24,13 +24,13 @@ pub fn app(terminal: &mut DefaultTerminal) -> anyhow::Result<()> {
     loop {
         terminal.draw(render)?;
         if let Some(event) = crossterm::event::read()?.as_key_event() {
-            match ( app.mode, event.code) {
+            match (app.mode, event.code) {
                 (EditMode::Normal, KeyCode::Char(c)) => app.match_normal_command(c),
                 KeyCode::Char(c) => match c {
                     'q' => return Ok(()),
                     ''
                 },
-            }
+            };
         }
     }
 }

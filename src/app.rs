@@ -13,21 +13,21 @@ pub enum EditMode {
 }
 
 pub struct App {
-    command: String,
-    command_history: Vec<String>,
+    pub command: String,
+    pub command_history: Vec<String>,
     // Index within the command history (for searching backwards)
-    command_history_idx: usize,
+    pub command_history_idx: usize,
     // Index within the command text box.
-    command_edit_idx: usize,
+    pub command_edit_idx: usize,
 
     // Positions within different segments of the program that are being edited
     // These could be stored within the `EditMode` enum, but then they wouldn't be saved when you
     // move to some other part of the program
-    instruction_position: usize,
-    stack_position: usize,
-    register_being_edited: Reg,
+    pub instruction_position: usize,
+    pub stack_position: usize,
+    pub register_being_edited: Reg,
 
-    mode: EditMode,
+    pub mode: EditMode,
 }
 
 impl App {
