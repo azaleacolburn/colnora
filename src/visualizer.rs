@@ -1,13 +1,20 @@
 use crate::{
-    app::{App, EditMode}, assembler::{self, Reg}, machine::Machine, runnable::{Loaded, MachineState}
+    app::{App, EditMode},
+    assembler::{self},
+    instruction::Instruction,
+    machine::Machine,
+    reg::Reg,
+    runnable::{Loaded, MachineState},
 };
 use anyhow::Result;
 use ratatui::{
     DefaultTerminal, Frame,
     crossterm::{self, event::KeyCode},
+    layout::{Constraint, Direction, Layout},
+    style::Stylize,
+    widgets::{Block, Paragraph},
 };
 use std::fs::read_to_string;
-
 
 pub fn read_instructions_file<S: MachineState>(machine: Machine<S>) -> Result<Machine<Loaded>> {
     let instructions_str = read_to_string("tests/hello_name.s")?;
@@ -18,23 +25,53 @@ pub fn read_instructions_file<S: MachineState>(machine: Machine<S>) -> Result<Ma
     // let mut machine = Machine::<Loaded>::new(assembly_file);
     Ok(machine.load_all(assembly_file))
 }
-
 pub fn app(terminal: &mut DefaultTerminal) -> anyhow::Result<()> {
     let mut app = App::new();
     loop {
         terminal.draw(render)?;
         if let Some(event) = crossterm::event::read()?.as_key_event() {
-            match (app.mode, event.code) {
+            let stop = match (app.mode, event.code) {
                 (EditMode::Normal, KeyCode::Char(c)) => app.match_normal_command(c),
-                KeyCode::Char(c) => match c {
-                    'q' => return Ok(()),
-                    ''
-                },
+                _ => false,
             };
+
+            if stop {
+                break;
+            }
         }
     }
+
+    Ok(())
 }
 
-fn render(frame: &mut Frame) {
-    frame.render_widget("hello_world", frame.area());
+fn render(frame: &mut Frame, instructions: &[Instruction], registers: &[(Reg, i32)], stack: &[u8]) {
+    let layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(vec![
+            Constraint::Percentage(50),
+            Constraint::Percentage(25),
+            Constraint::Percentage(25),
+        ])
+        .split(frame.area());
+
+    let window = Block::bordered().title("Colnora Visual Interface");
+    let title = Paragraph::new("").centered().yellow().block(window);
+
+    let instruction_block = Block::bordered().title("Instructions");
+
+    let register_block = Block::bordered().title("Registers");
+    let stack_block = Block::bordered().title("Stack");
+
+    frame.render_widget(instruction_block, frame.area());
+}
+
+fn render_instructions(instructions: &[Instruction]) -> Vec<String> {
+    instructions
+        .iter()
+        .map(|inst| {
+            let mut str = inst.to_string();
+            str.push('\n');
+            str
+        })
+        .collect()
 }

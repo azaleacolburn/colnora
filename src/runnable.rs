@@ -1,4 +1,4 @@
-use crate::assembler::{Data, Instruction};
+use crate::{assembler::Data, instruction::Instruction};
 use anyhow::Result;
 
 pub enum Status {

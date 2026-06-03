@@ -1,6 +1,9 @@
 use crate::{
-    assembler::{AssemblyFile, Data, Instruction, Reg, Value},
+    assembler::{AssemblyFile, Data},
+    instruction::Instruction,
+    reg::Reg,
     runnable::{Loaded, MachineState, Status, Unloaded},
+    value::Value,
 };
 use anyhow::{Result, bail};
 use std::{
@@ -20,6 +23,7 @@ pub struct MachineInternal {
     registers: Registers,
     labels: Labels,
     instruction_counter: usize,
+    instructions: Vec<Instruction>,
     data: HashMap<String, usize>,
 }
 
@@ -31,6 +35,7 @@ impl MachineInternal {
             registers: Machine::<Unloaded>::init_reg(),
             labels: HashMap::new(),
             instruction_counter: 0,
+            instructions: Vec::new(),
             data: HashMap::new(),
         })
     }

@@ -1,18 +1,15 @@
+use crate::visualizer::app;
 use anyhow::Result;
-use std::fs::read_to_string;
-
-use crate::{
-    machine::Machine,
-    runnable::{Runnable, Unloaded},
-    visualizer::app,
-};
 
 pub mod app;
 pub mod assembler;
+pub mod instruction;
 pub mod machine;
+pub mod reg;
 pub mod runnable;
 #[cfg(test)]
 mod test;
+pub mod value;
 pub mod visualizer;
 
 // fn main() -> Result<()> {
@@ -29,6 +26,7 @@ pub mod visualizer;
 //
 //     Ok(())
 // }
+
 fn main() -> Result<()> {
     ratatui::run(app)?;
 

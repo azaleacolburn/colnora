@@ -1,4 +1,4 @@
-use crate::assembler::Reg;
+use crate::reg::Reg;
 
 pub enum EditMode {
     Normal,
