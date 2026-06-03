@@ -6,6 +6,7 @@ pub mod assembler;
 pub mod instruction;
 pub mod machine;
 pub mod reg;
+pub mod render;
 pub mod runnable;
 #[cfg(test)]
 mod test;

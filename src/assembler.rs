@@ -1,4 +1,4 @@
-use crate::{instruction::Instruction, reg::Reg, value::Value};
+use crate::instruction::Instruction;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]

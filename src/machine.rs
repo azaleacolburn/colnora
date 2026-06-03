@@ -118,9 +118,13 @@ impl<'a> Machine<Loaded> {
     /// # Returns
     /// A `Status` indicating whether the simulation has halted
     pub fn step(&mut self) -> Result<Status> {
-        let instruction = &self.state.instructions[self.internal.instruction_counter];
+        // TODO
+        // Figure out how to not clone this instruction
+        // since `Instruction` is relavtively heavy-weight
+        let instruction = self.state.instructions[self.internal.instruction_counter].clone();
+
         // Determines whether to break
-        if self.execute_instruction(instruction)? {
+        if self.execute_instruction(&instruction)? {
             return Ok(Status::Exit);
         }
 

@@ -4,7 +4,7 @@ use crate::{
     instruction::Instruction,
     machine::Machine,
     reg::Reg,
-    runnable::{Loaded, MachineState},
+    runnable::{Loaded, MachineState, Unloaded},
 };
 use anyhow::Result;
 use ratatui::{
@@ -28,6 +28,7 @@ pub fn read_instructions_file<S: MachineState>(machine: Machine<S>) -> Result<Ma
 
 pub fn app(terminal: &mut DefaultTerminal) -> anyhow::Result<()> {
     let mut app = App::new();
+    let mut machine = Machine::<Unloaded>::new();
     loop {
         terminal.draw(|frame: &mut Frame| render(frame, machine))?;
         if let Some(event) = crossterm::event::read()?.as_key_event() {
@@ -45,7 +46,11 @@ pub fn app(terminal: &mut DefaultTerminal) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn render(frame: &mut Frame, instructions: &[Instruction], registers: &[(Reg, i32)], stack: &[u8]) {
+fn instruction_block() {
+    let instruction_block = Block::bordered().title("Instructions");
+}
+
+fn render(frame: &mut Frame) {
     let layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints(vec![
@@ -57,8 +62,6 @@ fn render(frame: &mut Frame, instructions: &[Instruction], registers: &[(Reg, i3
 
     let window = Block::bordered().title("Colnora Visual Interface");
     let title = Paragraph::new("").centered().yellow().block(window);
-
-    let instruction_block = Block::bordered().title("Instructions");
 
     let register_block = Block::bordered().title("Registers");
     let stack_block = Block::bordered().title("Stack");
