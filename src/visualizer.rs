@@ -46,11 +46,7 @@ pub fn app(terminal: &mut DefaultTerminal) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn instruction_block() {
-    let instruction_block = Block::bordered().title("Instructions");
-}
-
-fn render(frame: &mut Frame) {
+fn render<S: MachineState>(frame: &mut Frame, machine: Machine<S>) {
     let layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints(vec![
@@ -62,6 +58,8 @@ fn render(frame: &mut Frame) {
 
     let window = Block::bordered().title("Colnora Visual Interface");
     let title = Paragraph::new("").centered().yellow().block(window);
+
+    let instruction_block = Block::bordered().title("Instructions");
 
     let register_block = Block::bordered().title("Registers");
     let stack_block = Block::bordered().title("Stack");
