@@ -1,11 +1,12 @@
+.data
+
+test_one: "113"
+test_three: "-531095"
+
 .text
 
 @start
-    push 49 ; 1
-    push 49 ; 1
-    push 51 ; 3
-    push 0 ; NULL
-    sub %a %sp 4
+    mov %a test_one
     bl @atoi
     eq %b 113
     assert
@@ -22,15 +23,7 @@
     eq %b 989655
     assert
 
-    push 45 ; '-'
-    push 53 ; 5
-    push 51 ; 3
-    push 49 ; 1
-    push 48 ; 0
-    push 57 ; 9
-    push 53 ; 5
-    push 0 ; NULL
-    sub %a %sp 8
+    mov %a test_three
     bl @atoi
     put %b
     eq %b -531095
@@ -40,8 +33,13 @@
 
 ; Put the pointer to the null-termineted string in `%a`
 ; Returns the resultant number in `%b`
+; All other registers are guaranteed to not be modified
 @atoi
-    mov %b 0 ; Sum
+    ; Save register values
+    push %c
+    push %d
+
+    mov %b 0 ; Initialize sum
 
     ; Check sign
     mov %c [%a]
@@ -62,4 +60,9 @@
     brif @end
     neg %b %b
     @end
+
+    ; Restore register values
+    pop %d
+    pop %c
+
     ret

@@ -9,7 +9,7 @@ pub enum Status {
 pub trait Runnable<'a> {
     fn load_data(&mut self, data: &[(String, Data)]);
     fn load_instructions(&mut self, instructions: &'a [Instruction]);
-    fn load_labels(&mut self) -> Result<()>;
+    fn load_labels(&mut self);
 
     fn load_all(&mut self, data: &[(String, Data)], instructions: &'a [Instruction]) {
         self.load_data(data);
@@ -22,9 +22,11 @@ pub trait Runnable<'a> {
     fn step(&mut self) -> Result<Status>;
 }
 
+#[derive(Debug, Clone)]
 pub struct Loaded {
     pub instructions: Vec<Instruction>,
 }
+#[derive(Debug, Clone)]
 pub struct Unloaded {}
 
 pub trait MachineState {}

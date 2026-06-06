@@ -2,7 +2,7 @@ use std::fs::{read_dir, read_to_string};
 
 use anyhow::bail;
 
-use crate::{assembler, machine::Machine};
+use crate::{assembler, machine::Machine, runnable::Unloaded};
 
 #[test]
 fn test_all() -> anyhow::Result<()> {
@@ -17,9 +17,9 @@ fn test_all() -> anyhow::Result<()> {
             let file_text = read_to_string(dir.path())?;
             let assembly_file = assembler::parse_file(&file_text);
 
-            let mut machine = Machine::new();
-            machine.load(&assembly_file.data);
-            match machine.run(&assembly_file.instructions) {
+            let machine = Machine::<Unloaded>::new();
+            let mut machine = machine.load_all(assembly_file);
+            match machine.run() {
                 Ok(_) => println!("`{}` Test Succeeded", name),
                 Err(_) => {
                     failed.push(name.to_string());
